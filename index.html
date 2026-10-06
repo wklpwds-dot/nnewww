@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Орфографический тренажёр — Причастия</title>
+<style>
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:Arial,Helvetica,sans-serif;
+    background:linear-gradient(135deg,#eef2ff,#f8fafc);
+    color:#172033; min-height:100vh;
+  }
+  .app{max-width:900px;margin:0 auto;padding:28px 18px 45px}
+  .card{
+    background:white;border-radius:24px;padding:28px;
+    box-shadow:0 15px 45px rgba(31,41,55,.10);
+  }
+  h1{margin:0 0 8px;font-size:30px}
+  .subtitle{color:#64748b;margin:0 0 24px}
+  .top{display:flex;justify-content:space-between;gap:15px;align-items:center;margin-bottom:18px}
+  .badge{padding:8px 13px;border-radius:999px;background:#eef2ff;color:#4338ca;font-weight:700;font-size:14px}
+  .progress{height:9px;background:#e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:28px}
+  .bar{height:100%;background:#4f46e5;width:0;transition:.3s}
+  .question{font-size:22px;font-weight:700;line-height:1.4;margin:20px 0}
+  .hint{color:#64748b;font-size:15px;margin-bottom:18px}
+  .options{display:grid;gap:12px}
+  button.option{
+    border:2px solid #e5e7eb;background:#fff;border-radius:15px;
+    padding:15px 17px;text-align:left;font-size:17px;cursor:pointer;
+    transition:.18s;
+  }
+  button.option:hover:not(:disabled){border-color:#818cf8;background:#f8f7ff;transform:translateY(-1px)}
+  button.option:disabled{cursor:default}
+  .correct{border-color:#16a34a!important;background:#f0fdf4!important}
+  .wrong{border-color:#dc2626!important;background:#fef2f2!important}
+  .feedback{margin-top:20px;padding:18px;border-radius:16px;display:none;line-height:1.5}
+  .feedback.good{display:block;background:#f0fdf4;border:1px solid #bbf7d0}
+  .feedback.bad{display:block;background:#fef2f2;border:1px solid #fecaca}
+  .feedback strong{display:block;margin-bottom:5px}
+  .next{
+    margin-top:18px;border:0;background:#4f46e5;color:white;
+    border-radius:13px;padding:13px 20px;font-size:16px;font-weight:700;cursor:pointer;
+  }
+  .next:hover{background:#4338ca}
+  .hidden{display:none}
+  .result{text-align:center}
+  .score{font-size:54px;font-weight:800;color:#4f46e5;margin:12px 0}
+  .result p{color:#64748b}
+  .restart{border:0;background:#4f46e5;color:white;border-radius:13px;padding:14px 22px;font-size:16px;font-weight:700;cursor:pointer}
+  .topics{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 25px}
+  .topic{padding:7px 10px;background:#f1f5f9;border-radius:10px;color:#475569;font-size:13px}
+  @media(max-width:600px){.card{padding:20px}.question{font-size:19px}h1{font-size:25px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="card" id="quiz">
+    <div class="top">
+      <div>
+        <h1>Орфографический тренажёр</h1>
+        <p class="subtitle">Правописание действительных и страдательных причастий</p>
+      </div>
+      <div class="badge" id="counter">1 / 20</div>
+    </div>
+    <div class="topics">
+      <span class="topic">Действительные причастия</span>
+      <span class="topic">Страдательные причастия</span>
+      <span class="topic">Н и НН</span>
+      <span class="topic">Суффиксы</span>
+    </div>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div id="question"></div>
+    <div id="options" class="options"></div>
+    <div id="feedback" class="feedback"></div>
+    <button id="next" class="next hidden">Следующий вопрос →</button>
+  </div>
+
+  <div class="card result hidden" id="result">
+    <h1>Тест завершён!</h1>
+    <div class="score" id="score"></div>
+    <p id="resultText"></p>
+    <button class="restart" onclick="startQuiz()">Пройти ещё раз</button>
+  </div>
+</div>
+
+<script>
+const questions = [
+ {type:"Действительное причастие", q:"Выберите правильное написание:", sentence:"Мальчик, ___ к воротам, остановился.", options:["бежавший", "бежевший", "бежавщий", "бежавшый"], answer:0, rule:"От глагола «бежать» образуется действительное причастие прошедшего времени «бежавший»."},
+ {type:"Действительное причастие", q:"Выберите правильное написание:", sentence:"На ветке сидела птица, громко ___.", options:["поющая", "поющяя", "пающая", "поющаЯ"], answer:0, rule:"От глагола «петь» образуется причастие настоящего времени «поющая» с суффиксом -ющ-."},
+ {type:"Страдательное причастие", q:"Выберите правильный вариант:", sentence:"На столе лежало ___ письмо.", options:["подписаное", "подписанное", "подписаннае", "подписаннное"], answer:1, rule:"Полное страдательное причастие «подписанное» пишется с НН."},
+ {type:"Действительное причастие", q:"Как правильно написать?", sentence:"___ поезд медленно приближался к станции.", options:["Приближаюшийся", "Приближающийся", "Приближаещийся", "Приближающийсяй"], answer:1, rule:"От глагола «приближаться» образуется причастие «приближающийся»."},
+ {type:"Страдательное причастие", q:"Выберите правильное написание:", sentence:"На стене висела ___ картина.", options:["нарисованая", "нарисованная", "нарисованнная", "нарисованнаяя"], answer:1, rule:"Полное страдательное причастие «нарисованная» пишется с НН."},
+ {type:"Действительное причастие", q:"Выберите правильный вариант:", sentence:"___ дети внимательно слушали рассказ.", options:["слушаюшие", "слушащие", "слушащии", "слушающие"], answer:3, rule:"От глагола «слушать» образуется причастие «слушающий», множественное число — «слушающие»."},
+ {type:"Страдательное причастие", q:"Как правильно?", sentence:"Это хорошо ___ произведение.", options:["написанное", "написаное", "написаннае", "написаннное"], answer:0, rule:"Полное страдательное причастие «написанное» пишется с НН."},
+ {type:"Действительное причастие", q:"Выберите правильное написание:", sentence:"___ листья медленно падали на землю.", options:["опавшые", "опавшие", "опавшии", "опавшыи"], answer:1, rule:"От глагола «опасть» образуется причастие «опавший», множественное число — «опавшие»."},
+ {type:"Страдательное причастие", q:"Выберите правильный вариант:", sentence:"В комнате стоял недавно ___ шкаф.", options:["собраный", "собраннный", "собранный", "собронный"], answer:2, rule:"Полное страдательное причастие «собранный» пишется с НН."},
+ {type:"Действительное причастие", q:"Как правильно?", sentence:"___ на помощь спасатель быстро вошёл в дом.", options:["прибежевший", "прибежавший", "прибежавщий", "прибежавшый"], answer:1, rule:"От глагола «прибежать» образуется причастие «прибежавший» с суффиксом -вш-."},
+ {type:"Страдательное причастие", q:"Выберите правильное написание:", sentence:"В шкафу хранился ___ документ.", options:["провереный", "проверинный", "провереннный", "проверенный"], answer:3, rule:"Полное страдательное причастие «проверенный» пишется с НН."},
+ {type:"Действительное причастие", q:"Выберите правильный вариант:", sentence:"___ человек внимательно слушал лекцию.", options:["сидяший", "сидещий", "сидящий", "сидящийй"], answer:2, rule:"От глагола «сидеть» образуется причастие «сидящий»."},
+ {type:"Страдательное причастие", q:"Как правильно написать?", sentence:"На выставке представили ___ макет.", options:["построенный", "построеный", "пастроенный", "построинный"], answer:0, rule:"Полное страдательное причастие «построенный» пишется с НН."},
+ {type:"Действительное причастие", q:"Выберите правильное написание:", sentence:"___ над городом самолёт набирал высоту.", options:["пролетаюший", "пролетаещий", "пролетающийй", "пролетающий"], answer:3, rule:"От глагола «пролетать» образуется причастие «пролетающий» с суффиксом -ющ-."},
+ {type:"Страдательное причастие", q:"Выберите правильный вариант:", sentence:"На доске было написано хорошо ___ правило.", options:["объяснёное", "объяснённое", "объяснённное", "объясненнае"], answer:1, rule:"Полное страдательное причастие «объяснённое» пишется с НН."},
+ {type:"Действительное причастие", q:"Как правильно?", sentence:"___ по дороге путник остановился у реки.", options:["идуший", "идящий", "идущий", "идущийй"], answer:2, rule:"От глагола «идти» образуется причастие «идущий»."},
+ {type:"Страдательное причастие", q:"Выберите правильное написание:", sentence:"В саду стояла ___ беседка.", options:["покрашеная", "покрашеннаяя", "покрашенная", "покрашинная"], answer:2, rule:"Полное страдательное причастие «покрашенная» пишется с НН."},
+ {type:"Действительное причастие", q:"Выберите правильный вариант:", sentence:"___ спортсмен первым пересёк финишную черту.", options:["победивший", "победевший", "победивщий", "победившый"], answer:0, rule:"От глагола «победить» образуется причастие прошедшего времени «победивший»."},
+ {type:"Страдательное причастие", q:"Как правильно написать?", sentence:"На полке стояла ___ ваза.", options:["разбитая", "разбитаая", "разбиттая", "разбитея"], answer:0, rule:"«Разбитая» — страдательное причастие от глагола «разбить»; нормативное написание — одна т."},
+ {type:"Действительное причастие", q:"Выберите правильное написание:", sentence:"___ у окна девочка читала книгу.", options:["сидевшая", "сидевшяя", "сидившая", "сидевшаяя"], answer:0, rule:"Действительное причастие прошедшего времени от глагола «сидеть» — «сидевшая»."}
+];
+
+let current=0, score=0, answered=false;
+
+function startQuiz(){
+ // Перемешиваем варианты отдельно в каждом вопросе, сохраняя правильный ответ.
+ questions.forEach(item => {
+   const correctText = item.options[item.answer];
+   const shuffled = [...item.options];
+   for (let i = shuffled.length - 1; i > 0; i--) {
+     const j = Math.floor(Math.random() * (i + 1));
+     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+   }
+   item.options = shuffled;
+   item.answer = shuffled.indexOf(correctText);
+ });
+ current=0; score=0; answered=false;
+ document.getElementById("quiz").classList.remove("hidden");
+ document.getElementById("result").classList.add("hidden");
+ render();
+}
+function render(){
+ const item=questions[current];
+ document.getElementById("counter").textContent=`${current+1} / ${questions.length}`;
+ document.getElementById("bar").style.width=`${current/questions.length*100}%`;
+ document.getElementById("question").innerHTML=
+   `<div class="badge">${item.type}</div><div class="question">${item.q}<br>${item.sentence}</div>
+    <div class="hint">Выберите один вариант ответа.</div>`;
+ const box=document.getElementById("options");
+ box.innerHTML="";
+ item.options.forEach((opt,i)=>{
+   const b=document.createElement("button");
+   b.className="option"; b.textContent=opt; b.onclick=()=>choose(i);
+   box.appendChild(b);
+ });
+ document.getElementById("feedback").className="feedback";
+ document.getElementById("feedback").innerHTML="";
+ document.getElementById("next").classList.add("hidden");
+ answered=false;
+}
+function choose(i){
+ if(answered)return;
+ answered=true;
+ const item=questions[current];
+ const buttons=[...document.querySelectorAll(".option")];
+ buttons.forEach(b=>b.disabled=true);
+ buttons[item.answer].classList.add("correct");
+ const feedback=document.getElementById("feedback");
+ if(i===item.answer){
+   score++;
+   feedback.className="feedback good";
+   feedback.innerHTML="<strong>✓ Правильно!</strong>"+item.rule;
+ }else{
+   buttons[i].classList.add("wrong");
+   feedback.className="feedback bad";
+   feedback.innerHTML=`<strong>✗ Неверно.</strong>Правильный ответ: <b>${item.options[item.answer]}</b><br>${item.rule}`;
+ }
+ document.getElementById("next").classList.remove("hidden");
+}
+document.getElementById("next").onclick=()=>{
+ current++;
+ if(current<questions.length) render(); else finish();
+};
+function finish(){
+ document.getElementById("quiz").classList.add("hidden");
+ document.getElementById("result").classList.remove("hidden");
+ const pct=Math.round(score/questions.length*100);
+ document.getElementById("score").textContent=`${score} из ${questions.length}`;
+ let text=pct>=90?"Отличный результат! Вы уверенно владеете правописанием причастий."
+   :pct>=70?"Хороший результат! Повторите правила по тем вопросам, где были ошибки."
+   :pct>=50?"Есть база, но стоит ещё раз повторить образование и правописание причастий."
+   :"Рекомендуем повторить правила и пройти тренажёр ещё раз.";
+ document.getElementById("resultText").textContent=`${pct}% правильных ответов. ${text}`;
+}
+startQuiz();
+</script>
+</body>
+</html>
